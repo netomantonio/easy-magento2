@@ -1,6 +1,6 @@
 FROM varnish:6.4
 
-MAINTAINER echo <echo.magento@gmail.com>
+LABEL maintainer="[NETO] Antonio Miranda https://github.com/netomantonio"
 
 ARG ENV_TYPE
 ENV ENV_TYPE ${ENV_TYPE:-development}

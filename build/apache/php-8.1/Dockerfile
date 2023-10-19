@@ -1,6 +1,6 @@
-FROM php:7.2-apache
+FROM php:8.1-apache
 
-MAINTAINER echo <echo.magento@gmail.com>
+LABEL maintainer="[NETO] Antonio Miranda https://github.com/netomantonio"
 
 ENV XDEBUG_PORT 9000
 
@@ -25,6 +25,9 @@ RUN apt-get update \
 	gnupg \
 	redis-tools \
 	mariadb-client \
+	zlib1g-dev \
+	libpng-dev \
+	libjpeg-dev \
 	git \
 	vim \
 	wget \
@@ -40,13 +43,13 @@ RUN apt-get update \
 # Install Magento Dependencies
 
 RUN docker-php-ext-configure \
-  	gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/; \
+  	gd --with-freetype=/usr/include/ --with-jpeg=/usr/include/; \
   	docker-php-ext-install \
   	opcache \
-  	gd \
   	bcmath \
+  	gd \
   	intl \
-  	mbstring \
+  	mysqli \
   	pdo_mysql \
   	soap \
   	xsl \
@@ -64,26 +67,22 @@ RUN apt-get update \
   	&& echo "extension=oauth.so" > /usr/local/etc/php/conf.d/docker-php-ext-oauth.ini
 
 # Install Node, NVM, NPM and Grunt
+USER root
+RUN apt-get update && \
+    apt-get install -y curl gnupg && \
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs build-essential && \
+    apt-get clean && \
+    npm i -g grunt-cli yarn
 
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
-  	&& apt-get install -y nodejs build-essential \
-    && npm i -g grunt-cli yarn
-
-# Install Composer
-
-RUN	curl -sS https://getcomposer.org/installer | php -- --version=1.10.17 --install-dir=/usr/local/bin/ --filename=composer
-
-# Install Code Sniffer
-
-RUN git clone https://github.com/magento/marketplace-eqp.git ~/.composer/vendor/magento/marketplace-eqp
-RUN cd ~/.composer/vendor/magento/marketplace-eqp && composer install
-RUN ln -s ~/.composer/vendor/magento/marketplace-eqp/vendor/bin/phpcs /usr/local/bin;
+RUN chmod 777 /usr/local/bin
+RUN	curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin/ --filename=composer
 
 ENV PATH="/var/www/.composer/vendor/bin/:${PATH}"
 
 # Install XDebug
 
-RUN yes | pecl install xdebug-2.9.8 && \
+RUN yes | pecl install xdebug-3.2.2 && \
 	 echo "zend_extension=$(find /usr/local/lib/php/extensions/ -name xdebug.so)" > /usr/local/etc/php/conf.d/xdebug.iniOLD
 
 # Install Mhsendmail
@@ -91,7 +90,7 @@ RUN yes | pecl install xdebug-2.9.8 && \
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install golang-go \
    && mkdir /opt/go \
    && export GOPATH=/opt/go \
-   && go get github.com/mailhog/mhsendmail
+   && go install github.com/mailhog/MailHog@latest
 
 # Install Magerun 2
 
@@ -120,8 +119,7 @@ RUN chmod 777 -Rf /var/www /var/www/.* \
 	&& chsh -s /bin/bash www-data\
 	&& a2enmod rewrite \
 	&& a2enmod headers
-
-RUN su -c "composer global require hirak/prestissimo" -s /bin/sh www-data
+USER www-data
 
 VOLUME /var/www/html
 WORKDIR /var/www/html
